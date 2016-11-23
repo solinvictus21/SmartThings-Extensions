@@ -1,18 +1,28 @@
+
 preferences {
+    //the IP address of the receiver
     input("destIp", "text", title: "IP", description: "The device IP")
+    //the port of the receiver
     input("destPort", "number", title: "Port", description: "The port you wish to connect", defaultValue: 80)
 }
 
 metadata {
 	definition (name: "Denon / Marantz Network Receiver", namespace: "KristopherKubicki", 
     	author: "kristopher@acm.org") {
-        capability "Actuator" 
+        //the Actuator capability just indicates to SmartThings that this device has commands
+        capability "Actuator"
+        //Switch to turn the receiver on and off
         capability "Switch" 
+        //Polling to retrieve
         capability "Polling"
+        //Switch level to control volume
         capability "Switch Level"
         
+        //mute attribute
         attribute "mute", "string"
+        //the current input
         attribute "input", "string"
+        //the current input channel
         attribute "inputChan", "enum"
         
         command "mute"
@@ -28,22 +38,27 @@ metadata {
 	}
 
 	tiles {
+    	//the device power status
 		standardTile("switch", "device.switch", width: 2, height: 2, canChangeIcon: false, canChangeBackground: true) {
             state "on", label: '${name}', action:"switch.off", backgroundColor: "#79b821", icon:"st.Electronics.electronics16"
             state "off", label: '${name}', action:"switch.on", backgroundColor: "#ffffff", icon:"st.Electronics.electronics16"
         }
-		standardTile("poll", "device.poll", width: 1, height: 1, canChangeIcon: false, inactiveLabel: true, canChangeBackground: false) {
-			state "poll", label: "", action: "polling.poll", icon: "st.secondary.refresh", backgroundColor: "#FFFFFF"
-		}
+        //the current receiver input
         standardTile("input", "device.input", width: 1, height: 1, canChangeIcon: false, inactiveLabel: true, canChangeBackground: false) {
 			state "input", label: '${currentValue}', action: "inputNext", icon: "", backgroundColor: "#FFFFFF"
 		}
+        //muted indicator
         standardTile("mute", "device.mute", width: 1, height: 1, canChangeIcon: false, inactiveLabel: true, canChangeBackground: false) {
             state "muted", label: '${name}', action:"unmute", backgroundColor: "#79b821", icon:"st.Electronics.electronics13"
             state "unmuted", label: '${name}', action:"mute", backgroundColor: "#ffffff", icon:"st.Electronics.electronics13"
 		}
+        //volume
         controlTile("level", "device.level", "slider", height: 1, width: 2, inactiveLabel: false, range: "(0..100)") {
 			state "level", label: '${name}', action:"setLevel"
+		}
+        //button to refresh all device data
+		standardTile("poll", "device.poll", width: 1, height: 1, canChangeIcon: false, inactiveLabel: true, canChangeBackground: false) {
+			state "poll", label: "", action: "polling.poll", icon: "st.secondary.refresh", backgroundColor: "#FFFFFF"
 		}
         
 		main "switch"
@@ -51,13 +66,10 @@ metadata {
 	}
 }
 
-
-
 def parse(String description) {
 	log.debug "Parsing '${description}'"
     
  	def map = stringToMap(description)
-
     
     if(!map.body || map.body == "DQo=") { return }
         log.debug "${map.body} "
@@ -130,7 +142,7 @@ def parse(String description) {
     } 
 }
 
-
+//set the volume level
 def setLevel(val) {
 	sendEvent(name: "mute", value: "unmuted")     
     sendEvent(name: "level", value: val)
@@ -138,31 +150,41 @@ def setLevel(val) {
 	request("cmd0=PutMasterVolumeSet%2F$scaledVal")
 }
 
+//turn on the receiver
 def on() {
 	sendEvent(name: "switch", value: 'on')
 	request('cmd0=PutZone_OnOff%2FON')
 }
 
-def off() { 
+//turn off the receiver
+def off() {
 	sendEvent(name: "switch", value: 'off')
 	request('cmd0=PutZone_OnOff%2FOFF')
 }
 
+//mute the receiver
 def mute() { 
 	sendEvent(name: "mute", value: "muted")
 	request('cmd0=PutVolumeMute%2FON')
 }
 
+//unmute the receiver
 def unmute() { 
 	sendEvent(name: "mute", value: "unmuted")
 	request('cmd0=PutVolumeMute%2FOFF')
 }
 
+//toggle the current mute setting
 def toggleMute(){
-    if(device.currentValue("mute") == "muted") { unmute() }
-	else { mute() }
+    if (device.currentValue("mute") == "muted") {
+    	unmute()
+    }
+	else {
+    	mute()
+    }
 }
 
+//go to the next receiver input
 def inputNext() { 
 
 	def cur = device.currentValue("input")   
@@ -182,7 +204,7 @@ def inputNext() {
     }
 }
 
-
+//select a specific receiver input
 def inputSelect(channel) {
  	sendEvent(name: "input", value: channel	)
 	request("cmd0=PutZone_InputFunction%2F$channel")
